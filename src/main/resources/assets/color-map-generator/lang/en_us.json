@@ -1,0 +1,11 @@
+{
+  "commands.colormap.generate.success": "Successfully generated color map at `%s`",
+  "commands.colormap.whereis": "%s",
+  "commands.colormap.help": "Tools for generating a map of colors to minecraft blocks.",
+
+  "commands.imagefill.build-colormap.processing": "Building color map...",
+  "commands.imagefill.build-colormap.success": "Successfully built color map.",
+
+  "commands.blockof.result": "%s",
+  "commands.colorof.result": "%s"
+}

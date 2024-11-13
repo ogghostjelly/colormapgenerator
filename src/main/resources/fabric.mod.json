@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "color-map-generator",
+	"version": "${version}",
+	"name": "Color Map Generator",
+	"description": "Generates a map of colors to minecraft blocks.",
+	"authors": [
+		"OgGhostJelly"
+	],
+	"contact": {
+		"homepage": "https://ogghostjelly.github.io/",
+		"sources": "https://github.com/OgGhostJelly/color-map-generator"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/color-map-generator/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"ogghostjelly.colormapgenerator.ColorMapGenerator"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.9",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
