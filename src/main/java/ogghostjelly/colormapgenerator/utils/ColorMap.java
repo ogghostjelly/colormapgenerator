@@ -2,10 +2,14 @@ package ogghostjelly.colormapgenerator.utils;
 
 import net.minecraft.block.*;
 import net.minecraft.registry.Registries;
+import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 // TODO: You might be able to use fluids as long as you place blocks around them.
@@ -21,7 +25,7 @@ public class ColorMap {
         }
 
         public double difference(@NotNull ColorMapItem o) {
-            return ColorUtil.differenceARGB(this.color.color, o.color.color);
+            return ColorUtil.differenceColor(this.color.color, o.color.color);
         }
 
         @Override
@@ -37,14 +41,20 @@ public class ColorMap {
     }
 
     public static ColorMap generateColorMap() {
+        return generateColorMap(item -> {
+            // Cactus breaks when placed near other blocks which is not helpful to us,
+            // so we remove it from the map.
+            return !(item.block instanceof CactusBlock) &&
+                    isNotFluid(item.block.getDefaultState()) &&
+                    isSolid(item.block.getDefaultState());
+        });
+    }
+
+    public static ColorMap generateColorMap(Predicate<? super ColorMapItem> filter) {
         List<ColorMapItem> colorMap = Registries.BLOCK.stream()
                 .map(block -> new ColorMapItem(block, block.getDefaultMapColor()))
                 .filter(item -> item.color != MapColor.CLEAR)
-                // Cactus breaks when placed near other blocks which is not helpful to us,
-                // so we remove it from the map.
-                .filter(item -> !(item.block instanceof CactusBlock))
-                .filter(item -> isNotFluid(item.block.getDefaultState()))
-                .filter(item -> isSolid(item.block.getDefaultState()))
+                .filter(filter)
                 .distinct()
                 .toList();
 
@@ -52,13 +62,13 @@ public class ColorMap {
     }
 
     public @Nullable Block colorToBlock(int color) {
-        if (color == MapColor.CLEAR.color) {
+        if (ColorUtil.IsTransparent(color)) {
             return null;
         }
 
         return this.colorMap.stream().min((a, b) -> {
-                    double aDif = ColorUtil.differenceARGB(color, a.color.color);
-                    double bDif = ColorUtil.differenceARGB(color, b.color.color);
+                    double aDif = ColorUtil.differenceColor(color, a.color.color);
+                    double bDif = ColorUtil.differenceColor(color, b.color.color);
                     return Double.compare(aDif, bDif);
                 })
                 .map(x -> x.block)

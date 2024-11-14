@@ -2,82 +2,40 @@ package ogghostjelly.colormapgenerator.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.serialization.Codec;
+import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.texture.NativeImage;
-import net.minecraft.command.argument.BlockPosArgumentType;
-import net.minecraft.command.argument.EnumArgumentType;
 import net.minecraft.registry.Registries;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.StringIdentifiable;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.world.GameRules;
 import ogghostjelly.colormapgenerator.utils.ColorMap;
-import ogghostjelly.colormapgenerator.utils.ColorUtil;
 import ogghostjelly.colormapgenerator.utils.CommandExecutor;
-import org.jetbrains.annotations.Nullable;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import ogghostjelly.colormapgenerator.utils.OgjUtils;
+import ogghostjelly.colormapgenerator.utils.image.IBlockImage;
+import ogghostjelly.colormapgenerator.utils.image.RLEBlockImage;
+import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Path;
 
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 
-enum ImageFillOrientation implements StringIdentifiable {
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-    ;
-
-    public static final Codec<ImageFillOrientation> CODEC = StringIdentifiable.createCodec(ImageFillOrientation::values);
-
-    @Override
-    public String asString() {
-        return switch (this) {
-            case TopLeft -> "top_left";
-            case TopRight -> "top_right";
-            case BottomLeft -> "bottom_left";
-            case BottomRight -> "bottom_right";
-        };
-    }
-}
-
-class ImageFillOrientationArgumentType extends EnumArgumentType<ImageFillOrientation> {
-    private ImageFillOrientationArgumentType() {
-        super(ImageFillOrientation.CODEC, ImageFillOrientation::values);
-    }
-
-    public static ImageFillOrientationArgumentType orientation() {
-        return new ImageFillOrientationArgumentType();
-    }
-}
-
 public class ImageFillCommand {
-    private record PlaceBlockCommandArgs(Block block, BlockPos pos) { }
-    private static final CommandExecutor<PlaceBlockCommandArgs> commandExecutor
-            = new CommandExecutor<>(50, ImageFillCommand::placeBlock);
+    private static final CommandExecutor commandExecutor
+            = new CommandExecutor(50);
 
     public static void registerCommandsClient() {
         ClientCommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess) -> dispatcher.register(literal("imagefill")
                 .requires(source -> source.hasPermissionLevel(2))
-                .then(argument("pos", BlockPosArgumentType.blockPos())
-                        .then(argument("orientation", ImageFillOrientationArgumentType.orientation())
-                                .executes(ImageFillCommand::execute))))));
+                .executes(ImageFillCommand::execute))));
 
         ClientCommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess) -> dispatcher.register(literal("cancelimagefill")
                 .requires(source -> source.hasPermissionLevel(2))
@@ -87,9 +45,8 @@ public class ImageFillCommand {
                 }))));
     }
 
-    private static void placeBlock(MinecraftClient client, PlaceBlockCommandArgs args) {
-        BlockPos pos = args.pos;
-        Identifier blockId = Registries.BLOCK.getId(args.block);
+    private static void placeBlock(MinecraftClient client, BlockPos pos, Block block) {
+        Identifier blockId = Registries.BLOCK.getId(block);
 
         ClientPlayNetworkHandler handler = client.getNetworkHandler();
         if (handler == null) {
@@ -97,24 +54,65 @@ public class ImageFillCommand {
         }
 
         handler.sendChatCommand(String.format("tp %d %d %d", pos.getX(), pos.getY() + 1, pos.getZ()));
-        if (args.block instanceof FallingBlock || args.block instanceof BrushableBlock || args.block instanceof SnowBlock || args.block instanceof CarpetBlock) {
+        if (block instanceof FallingBlock || block instanceof BrushableBlock || block instanceof SnowBlock || block instanceof CarpetBlock) {
             handler.sendChatCommand(String.format("setblock %d %d %d minecraft:dirt", pos.getX(), pos.getY() - 1, pos.getZ()));
         }
         handler.sendChatCommand(String.format("setblock %d %d %d %s", pos.getX(), pos.getY(), pos.getZ(), blockId));
     }
 
+    private static final Dynamic2CommandExceptionType TOO_BIG_EXCEPTION = new Dynamic2CommandExceptionType((maxCount, count)
+            -> Text.stringifiedTranslatable("commands.fill.toobig", maxCount, count));
+
+    private static void placeCube(MinecraftClient client, BlockPos from, BlockPos to, Block block) throws CommandSyntaxException {
+        Identifier blockId = Registries.BLOCK.getId(block);
+
+        ClientPlayNetworkHandler handler = client.getNetworkHandler();
+        if (handler == null) {
+            return;
+        }
+
+        if (client.world == null) {
+            return;
+        }
+
+        // TODO: Add better max size check.
+
+        Vec3i size = OgjUtils.abs(to.subtract(from));
+        int blocks = size.getX() * size.getY() * size.getZ();
+        int maxBlockLimit = client.world.getGameRules().getInt(GameRules.COMMAND_MODIFICATION_BLOCK_LIMIT);
+
+        if (blocks > maxBlockLimit) {
+            throw TOO_BIG_EXCEPTION.create(maxBlockLimit, blocks);
+        }
+
+        BlockPos center = new BlockPos(OgjUtils.divide(from.add(to), 2));
+        handler.sendChatCommand(String.format("tp %d %d %d", center.getX(), center.getY() + 1, center.getZ()));
+
+        handler.sendChatCommand(String.format("fill %d %d %d %d %d %d %s",
+                from.getX(),
+                from.getY(),
+                from.getZ(),
+
+                to.getX(),
+                to.getY(),
+                to.getZ(),
+
+                blockId));
+    }
+
     private static int execute(CommandContext<FabricClientCommandSource> context) {
         try {
-            return executeImpl(context);
+            executeImpl(context);
         } catch (IOException | CommandSyntaxException e) {
             throw new RuntimeException(e);
         }
+        return 1;
     }
 
-    static int executeImpl(CommandContext<FabricClientCommandSource> context) throws IOException, CommandSyntaxException {
-        NativeImage image = askUserForImage();
+    static void executeImpl(CommandContext<FabricClientCommandSource> context) throws IOException, CommandSyntaxException {
+        NativeImage image = OgjUtils.askUserForImage();
         if (image == null) {
-            return 1;
+            return;
         }
 
         context.getSource().sendFeedback(Text.translatable("commands.imagefill.build-colormap.processing")
@@ -123,51 +121,37 @@ public class ImageFillCommand {
         context.getSource().sendFeedback(Text.translatable("commands.imagefill.build-colormap.success")
                 .withColor(Colors.GREEN));
 
-        for (int y = 0; y < image.getHeight(); y++) {
-            MutableText text = Text.literal("").copy();
-            for (int x = 0; x < image.getWidth(); x++) {
-                int color = ColorUtil.SwapFormat(image.getColor(x, y));
-                if (ColorUtil.IsTransparent(color)) {
-                    text.append(Text.literal("█").withColor(Colors.GRAY));
-                } else {
-                    text.append(Text.literal("█").withColor(color));
-                }
-            }
-            context.getSource().sendFeedback(text);
-        }
+        IBlockImage blockImage = new RLEBlockImage(image, colorMap);
 
         Vec3d originDouble = context.getSource().getPosition();
         Vec3i origin = new Vec3i((int) originDouble.x, (int) originDouble.y, (int) originDouble.z);
 
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                int color = ColorUtil.SwapFormat(image.getColor(x, y));
-                if (ColorUtil.IsTransparent(color)) {
-                    context.getSource().sendFeedback(Text.literal("█").withColor(Colors.GRAY));
-                    continue;
-                } else {
-                    context.getSource().sendFeedback(Text.literal("█").withColor(color));
-                }
+        // TODO: Add better print messages
 
-                Block block = colorMap.colorToBlock(color);
-                if (block == null) {
-                    continue;
-                }
-                BlockPos pos = new BlockPos(origin.add(new Vec3i(x, 0, y)));
+        executePrintBlockImage(origin, blockImage);
 
-                commandExecutor.add(new PlaceBlockCommandArgs(block, pos));
-            }
-        }
-
-        return 1;
+        image.close();
     }
 
-    static @Nullable NativeImage askUserForImage() throws IOException {
-        String filePath = TinyFileDialogs.tinyfd_openFileDialog("", null, null, "image files", false);
-        if (filePath == null) {
-            return null;
-        }
-        FileInputStream reader = new FileInputStream(filePath);
-        return NativeImage.read(reader);
+    private static void executePrintBlockImage(Vec3i origin, @NotNull IBlockImage image) {
+        image.getChunks().forEach(chunk -> {
+            if (chunk.from == chunk.to) {
+                var pos = new BlockPos(origin.add(new Vec3i(chunk.from.x, 0, chunk.from.y)));
+                commandExecutor.add(client -> placeBlock(client, pos, chunk.block));
+            } else {
+                var from = new BlockPos(origin.add(new Vec3i(chunk.from.x, 0, chunk.from.y)));
+                var to = new BlockPos(origin.add(new Vec3i(chunk.to.x, 0, chunk.to.y)));
+
+                commandExecutor.add(client -> {
+                    try {
+                        placeCube(client, from, to, chunk.block);
+                    } catch (CommandSyntaxException e) {
+                        Text message = Text.literal(e.getMessage()).withColor(Colors.RED);
+                        client.inGameHud.getChatHud().addMessage(message);
+                        client.getNarratorManager().narrate(message);
+                    }
+                });
+            }
+        });
     }
 }

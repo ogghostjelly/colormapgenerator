@@ -10,25 +10,18 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.command.argument.BlockStateArgument;
 import net.minecraft.command.argument.BlockStateArgumentType;
-import net.minecraft.command.argument.ColorArgumentType;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 import ogghostjelly.colormapgenerator.utils.ColorMap;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
-import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
-import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.*;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 
 public class ColorMapCommand {
     public static void registerCommandsClient() {
