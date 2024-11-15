@@ -17,16 +17,19 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.GameRules;
-import ogghostjelly.colormapgenerator.utils.ColorMap;
 import ogghostjelly.colormapgenerator.utils.CommandExecutor;
 import ogghostjelly.colormapgenerator.utils.OgjUtils;
+import ogghostjelly.colormapgenerator.utils.color.ColorMap;
+import ogghostjelly.colormapgenerator.utils.color.IColorMap;
 import ogghostjelly.colormapgenerator.utils.image.IBlockImage;
-import ogghostjelly.colormapgenerator.utils.image.RLEBlockImage;
+import ogghostjelly.colormapgenerator.utils.image.QTBlockImage;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
+
+// TODO: put image gen on a separate thread
 
 public class ImageFillCommand {
     private static final CommandExecutor commandExecutor
@@ -103,25 +106,21 @@ public class ImageFillCommand {
     private static int execute(CommandContext<FabricClientCommandSource> context) {
         try {
             executeImpl(context);
-        } catch (IOException | CommandSyntaxException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return 1;
     }
 
-    static void executeImpl(CommandContext<FabricClientCommandSource> context) throws IOException, CommandSyntaxException {
+    static void executeImpl(CommandContext<FabricClientCommandSource> context) throws IOException {
         NativeImage image = OgjUtils.askUserForImage();
         if (image == null) {
             return;
         }
 
-        context.getSource().sendFeedback(Text.translatable("commands.imagefill.build-colormap.processing")
-                .withColor(Colors.YELLOW));
-        ColorMap colorMap = ColorMap.generateColorMap();
-        context.getSource().sendFeedback(Text.translatable("commands.imagefill.build-colormap.success")
-                .withColor(Colors.GREEN));
+        IColorMap colorMap = ColorMap.generateColorMap();
 
-        IBlockImage blockImage = new RLEBlockImage(image, colorMap);
+        IBlockImage blockImage = new QTBlockImage(image, colorMap);
 
         Vec3d originDouble = context.getSource().getPosition();
         Vec3i origin = new Vec3i((int) originDouble.x, (int) originDouble.y, (int) originDouble.z);

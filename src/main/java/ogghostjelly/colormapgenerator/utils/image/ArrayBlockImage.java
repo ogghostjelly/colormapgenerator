@@ -2,8 +2,8 @@ package ogghostjelly.colormapgenerator.utils.image;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.texture.NativeImage;
-import ogghostjelly.colormapgenerator.utils.ColorMap;
-import ogghostjelly.colormapgenerator.utils.ColorUtil;
+import ogghostjelly.colormapgenerator.utils.color.ColorUtil;
+import ogghostjelly.colormapgenerator.utils.color.IColorMap;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector2i;
 
@@ -11,12 +11,15 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+/**
+ * Array-based block image. Similar to a bitmap.
+ */
 public class ArrayBlockImage implements IBlockImage {
     private final Block[] pixels;
     private final int width;
     private final int height;
 
-    public ArrayBlockImage(NativeImage image, ColorMap colorMap) {
+    public ArrayBlockImage(NativeImage image, IColorMap colorMap) {
         this.width = image.getWidth();
         this.height = image.getHeight();
         this.pixels = new Block[width * height];
@@ -28,6 +31,10 @@ public class ArrayBlockImage implements IBlockImage {
                 pixels[x + y * width] = block;
             }
         }
+    }
+
+    @NotNull Block getBlock(int x, int y) {
+        return this.pixels[x + y * this.width];
     }
 
     public int getHeight() {

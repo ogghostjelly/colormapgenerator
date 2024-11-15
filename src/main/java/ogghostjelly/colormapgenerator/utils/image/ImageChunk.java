@@ -15,7 +15,7 @@ public class ImageChunk {
         this.to = to;
     }
 
-    public ImageChunk(Block block, Vector2i point) {
+    public ImageChunk(@NotNull Block block, @NotNull Vector2i point) {
         this(block, point, point);
     }
 }

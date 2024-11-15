@@ -1,21 +1,25 @@
 package ogghostjelly.colormapgenerator.utils.image;
 
 import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.texture.NativeImage;
-import ogghostjelly.colormapgenerator.utils.ColorMap;
-import ogghostjelly.colormapgenerator.utils.ColorUtil;
+import ogghostjelly.colormapgenerator.utils.color.ColorUtil;
+import ogghostjelly.colormapgenerator.utils.color.IColorMap;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector2i;
 
 import java.util.ArrayList;
 import java.util.stream.Stream;
 
+/**
+ * <a href="https://en.wikipedia.org/wiki/Run-length_encoding">Run-length encoding</a>
+ */
 public class RLEBlockImage implements IBlockImage {
     private final ArrayList<ImageChunk> chunks;
     private final int width;
     private final int height;
 
-    public RLEBlockImage(NativeImage image, ColorMap map) {
+    public RLEBlockImage(NativeImage image, IColorMap map) {
         this.width = image.getWidth();
         this.height = image.getHeight();
         this.chunks = new ArrayList<>();
@@ -28,6 +32,11 @@ public class RLEBlockImage implements IBlockImage {
             for (int x = 0; x < width; x++) {
                 int color = ColorUtil.SwapFormat(image.getColor(x, y));
                 Block block = map.colorToBlock(color);
+                // The IColorMap interface used to return null instead of Blocks.AIR
+                // I can't be bothered to change the code to handle that, so I just swap Blocks.AIR back to null.
+                if (block == Blocks.AIR) {
+                    block = null;
+                }
 
                 if (currentBlock != block) {
                     if (currentBlock != null) {

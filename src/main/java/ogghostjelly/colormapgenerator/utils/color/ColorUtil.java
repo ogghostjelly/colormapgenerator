@@ -1,4 +1,4 @@
-package ogghostjelly.colormapgenerator.utils;
+package ogghostjelly.colormapgenerator.utils.color;
 
 import java.awt.*;
 

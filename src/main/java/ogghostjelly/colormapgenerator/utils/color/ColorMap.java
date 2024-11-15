@@ -1,40 +1,27 @@
-package ogghostjelly.colormapgenerator.utils;
+package ogghostjelly.colormapgenerator.utils.color;
 
 import net.minecraft.block.*;
 import net.minecraft.registry.Registries;
-import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 // TODO: You might be able to use fluids as long as you place blocks around them.
 
-public class ColorMap {
-    public static class ColorMapItem implements Comparable<ColorMapItem> {
-        public Block block;
-        public MapColor color;
-
-        public ColorMapItem(Block block, MapColor color) {
-            this.block = block;
-            this.color = color;
-        }
-
+public class ColorMap implements IColorMap {
+    public record ColorMapItem(Block block, MapColor color) implements Comparable<ColorMapItem> {
         public double difference(@NotNull ColorMapItem o) {
-            return ColorUtil.differenceColor(this.color.color, o.color.color);
+                return ColorUtil.differenceColor(this.color.color, o.color.color);
+            }
+
+            @Override
+            public int compareTo(@NotNull ColorMap.ColorMapItem o) {
+                return (int) Math.signum(this.difference(o));
+            }
         }
 
-        @Override
-        public int compareTo(@NotNull ColorMap.ColorMapItem o) {
-            return (int) Math.signum(this.difference(o));
-        }
-    }
-
-    List<ColorMapItem> colorMap;
+    final List<ColorMapItem> colorMap;
 
     private ColorMap(List<ColorMapItem> colorMap) {
         this.colorMap = colorMap;
@@ -61,9 +48,9 @@ public class ColorMap {
         return new ColorMap(colorMap);
     }
 
-    public @Nullable Block colorToBlock(int color) {
+    public @NotNull Block colorToBlock(int color) {
         if (ColorUtil.IsTransparent(color)) {
-            return null;
+            return Blocks.AIR;
         }
 
         return this.colorMap.stream().min((a, b) -> {
@@ -72,7 +59,7 @@ public class ColorMap {
                     return Double.compare(aDif, bDif);
                 })
                 .map(x -> x.block)
-                .orElse(null);
+                .orElse(Blocks.AIR);
     }
 
     private static boolean isNotFluid(@NotNull BlockState state) {
@@ -80,9 +67,5 @@ public class ColorMap {
     }
     private static boolean isSolid(@NotNull BlockState state) {
         return state.isOpaque();
-    }
-
-    public Stream<ColorMapItem> stream() {
-        return colorMap.stream();
     }
 }
