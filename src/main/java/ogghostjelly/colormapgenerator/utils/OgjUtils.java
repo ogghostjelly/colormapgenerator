@@ -29,4 +29,25 @@ public class OgjUtils {
                 pos.getY() / other,
                 pos.getZ() / other);
     }
+
+    /**
+     * Returns a new image which is the original image scaled by a factor of 2.
+     */
+    public static NativeImage getDoubleScaledImage(NativeImage image) {
+        NativeImage scaledImage = new NativeImage(image.getFormat(), image.getWidth()*2, image.getHeight()*2, false);
+
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int scaledX = x*2;
+                int scaledY = y*2;
+                int color = image.getColor(x, y);
+                scaledImage.setColor(scaledX, scaledY, color);
+                scaledImage.setColor(scaledX + 1, scaledY, color);
+                scaledImage.setColor(scaledX, scaledY + 1, color);
+                scaledImage.setColor(scaledX + 1, scaledY + 1, color);
+            }
+        }
+
+        return scaledImage;
+    }
 }

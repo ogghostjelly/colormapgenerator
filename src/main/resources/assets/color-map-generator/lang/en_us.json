@@ -4,5 +4,6 @@
   "commands.colormap.help": "Tools for generating a map of colors to minecraft blocks.",
 
   "commands.profile.colormap-result": "colormap completed in %sms",
-  "commands.profile.result": "%s completed in %sms with %s chunks"
+  "commands.profile.result": "%s completed in %sms with %s chunks",
+  "commands.profile.write-vis": "Writing `%s` chunk visualizer to `%s`"
 }

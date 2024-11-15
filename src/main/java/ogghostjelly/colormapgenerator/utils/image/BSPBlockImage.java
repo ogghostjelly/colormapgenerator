@@ -15,54 +15,46 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
- * <a href="https://en.wikipedia.org/wiki/Quadtree">Lossless Quadtree compression</a>
+ * Lossless compression using <a href="https://en.wikipedia.org/wiki/Binary_space_partitioning">binary search partitioning</a>
  */
-public class QTBlockImage implements IBlockImage {
-    private class QTSplit {
-        public final QTChunk topLeft;
-        public final QTChunk topRight;
-        public final QTChunk bottomLeft;
-        public final QTChunk bottomRight;
+public class BSPBlockImage implements IBlockImage {
+    private class BSPSplit {
+        public final BSPChunk left;
+        public final BSPChunk right;
 
-        private QTSplit(QTChunk topLeft, QTChunk topRight, QTChunk bottomLeft, QTChunk bottomRight) {
-            this.topLeft = topLeft;
-            this.topRight = topRight;
-            this.bottomLeft = bottomLeft;
-            this.bottomRight = bottomRight;
+        private BSPSplit(BSPChunk left, BSPChunk right) {
+            this.left = left;
+            this.right = right;
         }
     }
 
-    private class QTChunk {
+    private class BSPChunk {
         private final Vector2i from;
         private final Vector2i to;
 
-        private QTChunk(Vector2i from, Vector2i to) {
+        private BSPChunk(Vector2i from, Vector2i to) {
             this.from = from;
             this.to = to;
         }
 
         public Stream<ImageChunk> getChunks(ArrayBlockImage image) {
-            ColorMapGenerator.LOGGER.info(String.valueOf(this));
+            return this.getChunks(image, false);
+        }
 
+        public Stream<ImageChunk> getChunks(ArrayBlockImage image, boolean splitH) {
             ImageChunk imageChunk = this.tryToImageChunk(image);
             if (imageChunk != null) {
-                ColorMapGenerator.LOGGER.info("Cohesive chunk found! Returning.");
                 return Stream.of(imageChunk);
             }
 
-            QTSplit split = this.split();
+            BSPSplit split = this.split(splitH);
             if (split == null) {
-                ColorMapGenerator.LOGGER.info("Can't split further! Returning points.");
                 return this.pointsToImageChunks(image);
             }
 
-            ColorMapGenerator.LOGGER.info("Chunk splitting.");
-
             return Streams.concat(
-                    split.topLeft.getChunks(image),
-                    split.topRight.getChunks(image),
-                    split.bottomLeft.getChunks(image),
-                    split.bottomRight.getChunks(image)
+                    split.left.getChunks(image, !splitH),
+                    split.right.getChunks(image, !splitH)
             );
         }
 
@@ -94,46 +86,43 @@ public class QTBlockImage implements IBlockImage {
             return new Vector2d(from.add(this.to)).div(2.0);
         }
 
-        public @Nullable QTBlockImage.QTSplit split() {
-            if (this.from.x == this.to.x) {
-                return null;
-            } else if (this.from.y == this.to.y) {
+        public @Nullable BSPBlockImage.BSPSplit split(boolean splitH) {
+            if (splitH) {
+                return this.splitHorizontal();
+            } else {
+                return this.splitVertical();
+            }
+        }
+
+        public @Nullable BSPBlockImage.BSPSplit splitHorizontal() {
+            if (this.from.y == this.to.y) {
                 return null;
             }
 
-            ColorMapGenerator.LOGGER.info(String.format("%s %s | %s %s", this.from.x, this.from.y, this.to.x, this.to.y));
-            ColorMapGenerator.LOGGER.info(String.valueOf(this));
+            Vector2i center = new Vector2i(getCenter(), RoundingMode.FLOOR);
 
-            Vector2d center = this.getCenter();
+            BSPChunk top = new BSPChunk(this.from, new Vector2i(this.to.x, center.y));
+            BSPChunk bottom = new BSPChunk(new Vector2i(this.from.x, center.y + 1), this.to);
 
-            ColorMapGenerator.LOGGER.info(String.format("%s %s | %s %s", this.from.x, this.from.y, this.to.x, this.to.y));
-            ColorMapGenerator.LOGGER.info(String.valueOf(this));
+            return new BSPSplit(top, bottom);
+        }
 
-            Vector2i topCorner = new Vector2i(center, RoundingMode.FLOOR);
-            Vector2i bottomCorner = new Vector2i(center, RoundingMode.CEILING);
+        public @Nullable BSPBlockImage.BSPSplit splitVertical() {
+            if (this.from.x == this.to.x) {
+                return null;
+            }
 
-            ColorMapGenerator.LOGGER.info(String.format("%s %s | %s %s", this.from.x, this.from.y, this.to.x, this.to.y));
-            ColorMapGenerator.LOGGER.info(String.valueOf(this));
+            Vector2i center = new Vector2i(getCenter(), RoundingMode.FLOOR);
 
-            QTChunk topLeft = new QTChunk(this.from, topCorner);
-            QTChunk topRight = new QTChunk(new Vector2i(bottomCorner.x, this.from.y), new Vector2i(this.to.x, topCorner.y));
-            QTChunk bottomLeft = new QTChunk(new Vector2i(this.from.x, bottomCorner.y), new Vector2i(topCorner.x, this.to.y));
-            QTChunk bottomRight = new QTChunk(bottomCorner, this.to);
+            BSPChunk top = new BSPChunk(this.from, new Vector2i(center.x, this.to.y));
+            BSPChunk bottom = new BSPChunk(new Vector2i(center.x + 1, this.from.y), this.to);
 
-            ColorMapGenerator.LOGGER.info(String.format("%s %s | %s %s", this.from.x, this.from.y, this.to.x, this.to.y));
-            ColorMapGenerator.LOGGER.info(String.valueOf(this));
-
-            ColorMapGenerator.LOGGER.info("topLeft = " + topLeft);
-            ColorMapGenerator.LOGGER.info("topRight = " + topRight);
-            ColorMapGenerator.LOGGER.info("bottomLeft = " + bottomLeft);
-            ColorMapGenerator.LOGGER.info("bottomRight = " + bottomRight);
-
-            return new QTSplit(topLeft, topRight, bottomLeft, bottomRight);
+            return new BSPSplit(top, bottom);
         }
 
         @Override
         public boolean equals(Object object) {
-            if (!(object instanceof QTChunk other)) {
+            if (!(object instanceof BSPChunk other)) {
                 return super.equals(object);
             }
 
@@ -150,16 +139,16 @@ public class QTBlockImage implements IBlockImage {
         }
     }
 
-    private final QTChunk rootChunk;
+    private final BSPChunk rootChunk;
     private final ArrayBlockImage image;
     private final int width;
     private final int height;
 
-    public QTBlockImage(NativeImage image, IColorMap colorMap) {
+    public BSPBlockImage(NativeImage image, IColorMap colorMap) {
         this.width = image.getWidth();
         this.height = image.getHeight();
         this.image = new ArrayBlockImage(image, colorMap);
-        this.rootChunk = new QTChunk(
+        this.rootChunk = new BSPChunk(
                 new Vector2i(0, 0),
                 new Vector2i(this.width - 1, this.height - 1)
         );

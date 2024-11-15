@@ -12,20 +12,26 @@ import net.minecraft.command.argument.BlockStateArgument;
 import net.minecraft.command.argument.BlockStateArgumentType;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
+import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
+import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import ogghostjelly.colormapgenerator.utils.OgjUtils;
 import ogghostjelly.colormapgenerator.utils.color.ColorMap;
 import ogghostjelly.colormapgenerator.utils.color.IColorMap;
 import ogghostjelly.colormapgenerator.utils.image.ArrayBlockImage;
+import ogghostjelly.colormapgenerator.utils.image.BSPBlockImage;
 import ogghostjelly.colormapgenerator.utils.image.ImageChunk;
-import ogghostjelly.colormapgenerator.utils.image.QTBlockImage;
 import ogghostjelly.colormapgenerator.utils.image.RLEBlockImage;
+import org.joml.Vector2i;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.function.Supplier;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
@@ -47,6 +53,8 @@ public class ColorMapCommand {
                 .executes(ColorMapCommand::help))));
     }
 
+    // TODO: block vis
+
     private static int profile(CommandContext<FabricClientCommandSource> context) {
         try {
             profileImpl(context);
@@ -56,12 +64,64 @@ public class ColorMapCommand {
         return 1;
     }
 
-    private static void profileChunks(CommandContext<FabricClientCommandSource> context, String name, Supplier<Stream<ImageChunk>> fn) {
+    private static Path getConfigDir() {
+        return FabricLoader.getInstance().getConfigDir().resolve(ColorMapGenerator.MOD_ID);
+    }
+
+    private static Path getPathToChunkVisual(String name) throws IOException {
+        Path configDir = getConfigDir().resolve("chunk_vis");
+        Files.createDirectories(configDir);
+        return configDir.resolve(name + ".png");
+    }
+
+    private static void profileChunks(
+            CommandContext<FabricClientCommandSource> context,
+            NativeImage image,
+            String name,
+            Function<NativeImage, Stream<ImageChunk>> fn
+    ) {
         long beforeTime = System.currentTimeMillis();
-        Stream<ImageChunk> chunks = fn.get();
+        List<ImageChunk> chunks = fn.apply(image).toList();
         long afterTime = System.currentTimeMillis();
-        Text text = Text.translatable("commands.profile.result", name, afterTime - beforeTime, chunks.count());
+
+        Text text = Text.translatable("commands.profile.result", name, afterTime - beforeTime, chunks.size());
         context.getSource().sendFeedback(text);
+
+        NativeImage scaledImage = OgjUtils.getDoubleScaledImage(image);
+
+        chunks.forEach(chunk -> {
+            Vector2i scaledFrom = new Vector2i(chunk.from.x, chunk.from.y).mul(2);
+            Vector2i scaledTo = new Vector2i(chunk.to.x, chunk.to.y).mul(2);
+            int fillColor = 0xff0000ff;
+
+            if (Objects.equals(name, "rle")) {
+                ColorMapGenerator.LOGGER.info(String.valueOf(chunk));
+            }
+
+            if (scaledFrom == scaledTo) {
+                scaledImage.setColor(scaledFrom.x, scaledFrom.y, fillColor);
+                return;
+            }
+
+            for (int x = scaledFrom.x; x <= scaledTo.x; x++) {
+                scaledImage.setColor(x, scaledFrom.y, fillColor);
+                scaledImage.setColor(x, scaledTo.y, fillColor);
+            }
+
+            for (int y = scaledFrom.y; y <= scaledTo.y; y++) {
+                scaledImage.setColor(scaledFrom.x, y, fillColor);
+                scaledImage.setColor(scaledTo.x, y, fillColor);
+            }
+        });
+
+        try {
+            Path path = getPathToChunkVisual(name);
+            context.getSource().sendFeedback(Text.translatable("commands.profile.write-vis", name, path)
+                    .withColor(Colors.GRAY));
+            scaledImage.writeTo(path);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static void profileImpl(CommandContext<FabricClientCommandSource> context) throws IOException {
@@ -75,9 +135,9 @@ public class ColorMapCommand {
         long afterTime = System.currentTimeMillis();
         context.getSource().sendFeedback(Text.translatable("commands.profile.colormap-result", afterTime - beforeTime));
 
-        profileChunks(context, "array", () -> new ArrayBlockImage(image, colorMap).getChunks());
-        profileChunks(context, "rle", () -> new RLEBlockImage(image, colorMap).getChunks());
-        profileChunks(context, "qt", () -> new QTBlockImage(image, colorMap).getChunks());
+        profileChunks(context, image, "array", (image1) -> new ArrayBlockImage(image1, colorMap).getChunks());
+        profileChunks(context, image, "rle", (image1) -> new RLEBlockImage(image1, colorMap).getChunks());
+        profileChunks(context, image, "qt", (image1) -> new BSPBlockImage(image1, colorMap).getChunks());
 
         image.close();
     }
@@ -108,12 +168,12 @@ public class ColorMapCommand {
         return 1;
     }
 
-    private static Path getPathToColorMapFile() {
-        return FabricLoader.getInstance().getConfigDir().resolve("colormap.txt");
+    private static Path getPathToColorMap() {
+        return getConfigDir().resolve("colormap.txt");
     }
 
     private static int whereIs(CommandContext<FabricClientCommandSource> context) {
-        context.getSource().sendFeedback(Text.translatable("commands.colormap.whereis", getPathToColorMapFile().toString()));
+        context.getSource().sendFeedback(Text.translatable("commands.colormap.whereis", getPathToColorMap().toString()));
 
         return 1;
     }
@@ -128,7 +188,7 @@ public class ColorMapCommand {
     }
 
     private static void generateImpl(CommandContext<FabricClientCommandSource> context) throws IOException {
-        Path path = getPathToColorMapFile();
+        Path path = getPathToColorMap();
         BufferedWriter bw = new BufferedWriter(new FileWriter(path.toFile()));
 
         for (Block value : Registries.BLOCK) {

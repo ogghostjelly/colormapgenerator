@@ -22,7 +22,7 @@ import ogghostjelly.colormapgenerator.utils.OgjUtils;
 import ogghostjelly.colormapgenerator.utils.color.ColorMap;
 import ogghostjelly.colormapgenerator.utils.color.IColorMap;
 import ogghostjelly.colormapgenerator.utils.image.IBlockImage;
-import ogghostjelly.colormapgenerator.utils.image.QTBlockImage;
+import ogghostjelly.colormapgenerator.utils.image.RLEBlockImage;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -120,7 +120,7 @@ public class ImageFillCommand {
 
         IColorMap colorMap = ColorMap.generateColorMap();
 
-        IBlockImage blockImage = new QTBlockImage(image, colorMap);
+        IBlockImage blockImage = new RLEBlockImage(image, colorMap);
 
         Vec3d originDouble = context.getSource().getPosition();
         Vec3i origin = new Vec3i((int) originDouble.x, (int) originDouble.y, (int) originDouble.z);

@@ -18,4 +18,9 @@ public class ImageChunk {
     public ImageChunk(@NotNull Block block, @NotNull Vector2i point) {
         this(block, point, point);
     }
+
+    @Override
+    public String toString() {
+        return String.format("[ImageChunk: (%s, %s) to (%s, %s) with %s]", this.from.x, this.from.y, this.to.x, this.to.y, this.block);
+    }
 }
