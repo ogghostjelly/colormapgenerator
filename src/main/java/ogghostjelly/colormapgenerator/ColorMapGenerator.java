@@ -7,9 +7,9 @@ import org.slf4j.LoggerFactory;
 
 // TODO: add world edit/schematic support
 // TODO: separate chunk generators/encoding schemes into separate class maybe?
-// TODO: add block position to imagefill command
 // TODO: add staircasing
 // TODO: maybe colormap can be renamed to colorspace
+// TODO: can add dithering for better visuals?
 
 public class ColorMapGenerator implements ClientModInitializer {
     public static final String MOD_ID = "color-map-generator";

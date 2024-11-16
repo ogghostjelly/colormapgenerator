@@ -14,9 +14,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.GameRules;
+import ogghostjelly.colormapgenerator.command.argument.FabricClientBlockPosArgumentType;
 import ogghostjelly.colormapgenerator.utils.CommandExecutor;
 import ogghostjelly.colormapgenerator.utils.OgjUtils;
 import ogghostjelly.colormapgenerator.utils.color.ColorMap;
@@ -27,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 
 // TODO: put image gen on a separate thread
@@ -38,7 +39,8 @@ public class ImageFillCommand {
     public static void registerCommandsClient() {
         ClientCommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess) -> dispatcher.register(literal("imagefill")
                 .requires(source -> source.hasPermissionLevel(2))
-                .executes(ImageFillCommand::execute))));
+                .then(argument("pos", FabricClientBlockPosArgumentType.blockPos())
+                        .executes(ImageFillCommand::execute)))));
 
         ClientCommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess) -> dispatcher.register(literal("cancelimagefill")
                 .requires(source -> source.hasPermissionLevel(2))
@@ -118,12 +120,14 @@ public class ImageFillCommand {
             return;
         }
 
+
         IColorMap colorMap = ColorMap.generateColorMap();
 
         IBlockImage blockImage = new RLEBlockImage(image, colorMap);
 
-        Vec3d originDouble = context.getSource().getPosition();
-        Vec3i origin = new Vec3i((int) originDouble.x, (int) originDouble.y, (int) originDouble.z);
+        /*Vec3d originDouble = context.getSource().getPosition();
+        Vec3i origin = new Vec3i((int) originDouble.x, (int) originDouble.y, (int) originDouble.z);*/
+        BlockPos origin = FabricClientBlockPosArgumentType.getBlockPos(context, "pos");
 
         // TODO: Add better print messages
 
