@@ -6,17 +6,26 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.MapColor;
+import net.minecraft.client.render.block.BlockModels;
+import net.minecraft.client.render.model.BakedModel;
+import net.minecraft.client.render.model.BakedModelManager;
+import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.texture.NativeImage;
+import net.minecraft.client.texture.SpriteContents;
 import net.minecraft.command.argument.BlockStateArgument;
 import net.minecraft.command.argument.BlockStateArgumentType;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import ogghostjelly.colormapgenerator.utils.OgjUtils;
 import ogghostjelly.colormapgenerator.utils.color.ColorMap;
+import ogghostjelly.colormapgenerator.utils.color.ColorUtil;
 import ogghostjelly.colormapgenerator.utils.color.IColorMap;
 import ogghostjelly.colormapgenerator.utils.image.ArrayBlockImage;
 import ogghostjelly.colormapgenerator.utils.image.BSPBlockImage;
@@ -27,10 +36,10 @@ import org.joml.Vector2i;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -50,10 +59,88 @@ public class ColorMapCommand {
                         .executes(ColorMapCommand::blockof)))
                 .then(literal("profile")
                         .executes(ColorMapCommand::profile))
+                .then(literal("visualise")
+                        .executes(ColorMapCommand::visualise))
                 .executes(ColorMapCommand::help))));
     }
 
-    // TODO: block vis
+    private static Path getPathToVisualization() throws IOException {
+        Path configDir = getConfigDir();
+        Files.createDirectories(configDir);
+        return configDir.resolve("visualization.png");
+    }
+
+    private static int visualise(CommandContext<FabricClientCommandSource> context) {
+        try {
+            visualiseImpl(context);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return 1;
+    }
+
+    private static void visualiseImpl(CommandContext<FabricClientCommandSource> context) throws IOException {
+        NativeImage inputImage = OgjUtils.askUserForImage();
+        if (inputImage == null) {
+            return;
+        }
+
+        NativeImage outputImage = new NativeImage(inputImage.getWidth()*16, inputImage.getHeight()*16, false);
+
+        ColorMap colorMap = ColorMap.generateColorMap();
+        BakedModelManager bakedModelManager = context.getSource().getClient().getBakedModelManager();
+
+        for (int y = 0; y < inputImage.getHeight(); y++) {
+            for (int x = 0; x < inputImage.getWidth(); x++) {
+                int color = ColorUtil.SwapFormat(inputImage.getColor(x, y));
+                Block block = colorMap.colorToBlock(color);
+                if (block == Blocks.AIR) {
+                    continue;
+                }
+                Identifier blockId = Registries.BLOCK.getId(block);
+
+                BakedModel model = bakedModelManager.getModel(BlockModels.getModelId(block.getDefaultState()));
+                List<BakedQuad> quads = model.getQuads(block.getDefaultState(), Direction.UP, Random.create());
+                if (quads == null || quads.isEmpty()) {
+                    model = bakedModelManager.getMissingModel();
+                    quads = model.getQuads(block.getDefaultState(), Direction.UP, Random.create());
+                    context.getSource().sendFeedback(Text.translatable("commands.visualise.invalid-texture", blockId)
+                            .withColor(Colors.RED));
+                    ColorMapGenerator.LOGGER.error("invalid texture: empty quads");
+                }
+
+                SpriteContents sprite = quads.getFirst().getSprite().getContents();
+                NativeImage image;
+
+                try {
+                    Field field = SpriteContents.class.getDeclaredField("image");
+                    field.setAccessible(true);
+                    try {
+                        image = (NativeImage) field.get(sprite);
+                    } catch (IllegalAccessException exception) {
+                        context.getSource().sendFeedback(Text.translatable("commands.visualise.invalid-texture", blockId)
+                                .withColor(Colors.RED));
+                        ColorMapGenerator.LOGGER.error("invalid tex: illegal access");
+                        continue;
+                    }
+                } catch (NoSuchFieldException exception) {
+                    context.getSource().sendFeedback(Text.translatable("commands.visualise.invalid-texture", blockId)
+                            .withColor(Colors.RED));
+                    ColorMapGenerator.LOGGER.error("invalid tex: no such field `image`");
+                    continue;
+                }
+
+                image.copyRect(outputImage, 0, 0, x*16, y*16, 16, 16, false, false);
+            }
+        }
+
+        Path path = getPathToVisualization();
+        context.getSource().sendFeedback(Text.translatable("commands.visualise.write", path));
+        outputImage.writeTo(path);
+
+        outputImage.close();
+        inputImage.close();
+    }
 
     private static int profile(CommandContext<FabricClientCommandSource> context) {
         try {
@@ -93,10 +180,6 @@ public class ColorMapCommand {
             Vector2i scaledFrom = new Vector2i(chunk.from.x, chunk.from.y).mul(2);
             Vector2i scaledTo = new Vector2i(chunk.to.x, chunk.to.y).mul(2);
             int fillColor = 0xff0000ff;
-
-            if (Objects.equals(name, "rle")) {
-                ColorMapGenerator.LOGGER.info(String.valueOf(chunk));
-            }
 
             if (scaledFrom == scaledTo) {
                 scaledImage.setColor(scaledFrom.x, scaledFrom.y, fillColor);

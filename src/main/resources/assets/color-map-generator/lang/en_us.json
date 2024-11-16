@@ -5,5 +5,8 @@
 
   "commands.profile.colormap-result": "colormap completed in %sms",
   "commands.profile.result": "%s completed in %sms with %s chunks",
-  "commands.profile.write-vis": "Writing `%s` chunk visualizer to `%s`"
+  "commands.profile.write-vis": "Writing `%s` chunk visualizer to `%s`",
+
+  "commands.visualise.write": "Writing visualisation to `%s`",
+  "commands.visualise.invalid-texture": "%s: invalid texture, skipping."
 }
