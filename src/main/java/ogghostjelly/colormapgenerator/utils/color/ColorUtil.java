@@ -23,7 +23,7 @@ public class ColorUtil {
 
     /**
      * Converts ARGB (0xAARRGGBB) to ABGR (0xAABBGGRR) and vice versa.
-     * ARGB is the format minecraft uses. ABGR is the format NativeImage uses.
+     * ARGB is the format MapColor uses. ABGR is the format NativeImage uses.
      */
     public static int SwapFormat(int color) {
         int r = (color >> 16) & 0xFF;

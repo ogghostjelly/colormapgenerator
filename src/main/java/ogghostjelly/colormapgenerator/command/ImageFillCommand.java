@@ -5,27 +5,30 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
+import net.minecraft.util.ColorCode;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.GameRules;
+import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import ogghostjelly.colormapgenerator.command.argument.FabricClientBlockPosArgumentType;
 import ogghostjelly.colormapgenerator.utils.CommandExecutor;
 import ogghostjelly.colormapgenerator.utils.OgjUtils;
-import ogghostjelly.colormapgenerator.utils.color.ColorMap;
-import ogghostjelly.colormapgenerator.utils.color.IColorMap;
+import ogghostjelly.colormapgenerator.utils.color.ColorUtil;
+import ogghostjelly.colormapgenerator.utils.color.StaircasingColorMap;
 import ogghostjelly.colormapgenerator.utils.image.IBlockImage;
-import ogghostjelly.colormapgenerator.utils.image.RLEBlockImage;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
@@ -34,7 +37,7 @@ import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.lit
 
 public class ImageFillCommand {
     private static final CommandExecutor commandExecutor
-            = new CommandExecutor(50);
+            = new CommandExecutor(100);
 
     public static void registerCommandsClient() {
         ClientCommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess) -> dispatcher.register(literal("imagefill")
@@ -121,17 +124,42 @@ public class ImageFillCommand {
         }
 
 
-        IColorMap colorMap = ColorMap.generateColorMap();
-
-        IBlockImage blockImage = new RLEBlockImage(image, colorMap);
-
-        /*Vec3d originDouble = context.getSource().getPosition();
-        Vec3i origin = new Vec3i((int) originDouble.x, (int) originDouble.y, (int) originDouble.z);*/
+        StaircasingColorMap colorMap = StaircasingColorMap.generateColorMap();
         BlockPos origin = FabricClientBlockPosArgumentType.getBlockPos(context, "pos");
+
+        NativeImage outputImage = new NativeImage(image.getWidth(), image.getHeight(), true);
 
         // TODO: Add better print messages
 
-        executePrintBlockImage(origin, blockImage);
+        for (int x = 0; x < image.getWidth(); x++) {
+            int y = 0;
+
+            for (int z = 0; z < image.getHeight(); z++) {
+                int color = ColorUtil.SwapFormat(image.getColor(x, z));
+
+                Optional<StaircasingColorMap.ColorMapItem> maybeColorMapItem = colorMap.colorToBlock(color);
+                if (maybeColorMapItem.isEmpty()) {
+                    ColorMapGenerator.LOGGER.info("("+x+", "+z+") is transparent " + new ColorCode(color));
+                    y = 0;
+                    continue;
+                }
+                StaircasingColorMap.ColorMapItem colorMapItem = maybeColorMapItem.get();
+                ColorMapGenerator.LOGGER.info("("+x+", "+z+") is "+colorMapItem.block+" "+colorMapItem.brightness+" " + new ColorCode(color) + " " + new ColorCode(colorMapItem.color));
+                outputImage.setColor(x, z, ColorUtil.SwapFormat(colorMapItem.color));
+
+                switch (colorMapItem.brightness) {
+                    case MapColor.Brightness.LOW -> y--;
+                    case MapColor.Brightness.NORMAL -> {}
+                    case MapColor.Brightness.HIGH -> y++;
+                }
+
+                BlockPos pos = new BlockPos(new Vec3i(origin.getX()+x, origin.getY()+y, origin.getZ()+z));
+                commandExecutor.add(client -> placeBlock(client, pos, colorMapItem.block));
+            }
+        }
+
+        outputImage.writeTo(FabricLoader.getInstance().getConfigDir().resolve(ColorMapGenerator.MOD_ID).resolve("out.png"));
+        outputImage.close();
 
         image.close();
     }
