@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -274,9 +275,27 @@ public class ColorMapCommand {
         Path path = getPathToColorMap();
         BufferedWriter bw = new BufferedWriter(new FileWriter(path.toFile()));
 
-        for (Block value : Registries.BLOCK) {
-            MapColor color = value.getDefaultMapColor();
-            bw.write(Registries.BLOCK.getId(value) + " " + color.color + "\n");
+        ArrayList<Block>[] map = new ArrayList[64];
+
+        for (Block block : Registries.BLOCK) {
+            MapColor mapColor = block.getDefaultMapColor();
+            if (map[mapColor.id] == null) {
+                map[mapColor.id] = new ArrayList<>();
+            }
+            map[mapColor.id].add(block);
+        }
+
+        for (int id = 0; id < map.length; id++) {
+            MapColor mapColor = MapColor.get(id);
+            List<Block> blocks = map[id];
+
+            bw.write(mapColor.id + " " + mapColor.color);
+
+            for (Block block : blocks) {
+                bw.write(" " + Registries.BLOCK.getId(block));
+            }
+
+            bw.write("\n");
         }
 
         bw.close();
