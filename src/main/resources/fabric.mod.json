@@ -15,6 +15,9 @@
 	"icon": "assets/color-map-generator/icon.png",
 	"environment": "client",
 	"entrypoints": {
+		"modmenu": [
+			"ogghostjelly.colormapgenerator.ModMenu"
+		],
 		"client": [
 			"ogghostjelly.colormapgenerator.ColorMapGenerator"
 		]

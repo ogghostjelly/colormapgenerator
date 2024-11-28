@@ -1,14 +1,17 @@
 package ogghostjelly.colormapgenerator.utils;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.util.math.Vec3i;
+import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 
-public class OgjUtils {
+public class OgjUtil {
     public static @Nullable NativeImage askUserForImage() throws IOException {
         String filePath = TinyFileDialogs.tinyfd_openFileDialog("Select an image.", null, null, "image files", false);
         if (filePath == null) {
@@ -49,5 +52,9 @@ public class OgjUtils {
         }
 
         return scaledImage;
+    }
+
+    public static Path getConfigDir() {
+        return FabricLoader.getInstance().getConfigDir().resolve(ColorMapGenerator.MOD_ID);
     }
 }
