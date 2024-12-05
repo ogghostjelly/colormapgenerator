@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.block.BlockModels;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedModelManager;
@@ -19,6 +20,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
@@ -45,8 +47,8 @@ public class ColormapCommand {
         ClientCommandRegistrationCallback.EVENT.register(((dispatcher, registry) -> dispatcher.register(literal("colormap")
                 .then(literal("settings")
                         .executes(ColormapCommand::settings))
-                .then(literal("whereis")
-                        .executes(ColormapCommand::whereis))
+                .then(literal("openconfigfolder")
+                        .executes(ColormapCommand::openconfigfolder))
                 .then(literal("colorof").then(argument("block", BlockStateArgumentType.blockState(registry))
                         .executes(ColormapCommand::colorof)))
                 .then(literal("blockof").then(argument("color", IntegerArgumentType.integer())
@@ -100,7 +102,7 @@ public class ColormapCommand {
                     quads = model.getQuads(block.getDefaultState(), Direction.UP, Random.create());
                     context.getSource().sendFeedback(Text.translatable("commands.colormap-generator.visualise.invalid-texture", blockId)
                             .withColor(Colors.RED));
-                    LOGGER.error("invalid texture: empty quads");
+                    LOGGER.error("invalid texture: empty quads for `"+blockId+"`");
                 }
 
                 SpriteContents sprite = quads.getFirst().getSprite().getContents();
@@ -114,13 +116,13 @@ public class ColormapCommand {
                     } catch (IllegalAccessException exception) {
                         context.getSource().sendFeedback(Text.translatable("commands.colormap-generator.visualise.invalid-texture", blockId)
                                 .withColor(Colors.RED));
-                        LOGGER.error("invalid tex: illegal access");
+                        LOGGER.error("invalid texture: illegal access for `"+blockId+"`");
                         continue;
                     }
                 } catch (NoSuchFieldException exception) {
                     context.getSource().sendFeedback(Text.translatable("commands.colormap-generator.visualise.invalid-texture", blockId)
                             .withColor(Colors.RED));
-                    LOGGER.error("invalid tex: no such field `image`");
+                    LOGGER.error("invalid texture: no such field `image` for `"+blockId+"`");
                     continue;
                 }
 
@@ -169,15 +171,11 @@ public class ColormapCommand {
     /* === COLORMAP SETTINGS === */
 
     private static @NotNull Colormap getColormap() {
-        return null;
+        return Colormap.tryLoadFromConfig();
     }
 
-    private static Path getPathToColorMap() {
-        return OgjUtil.getConfigDir().resolve("colormap.txt");
-    }
-
-    private static int whereis(CommandContext<FabricClientCommandSource> context) {
-        context.getSource().sendFeedback(Text.translatable("commands.colormap-generator.whereis", getPathToColorMap().toString()));
+    private static int openconfigfolder(CommandContext<FabricClientCommandSource> context) {
+        Util.getOperatingSystem().open(OgjUtil.getConfigDir());
 
         return 1;
     }
@@ -192,8 +190,12 @@ public class ColormapCommand {
     }
 
     private static void settingsImpl(CommandContext<FabricClientCommandSource> context) throws IOException {
-
         MinecraftClient client = context.getSource().getClient();
-        client.setScreen(ModMenu.makeConfigScreen(client.currentScreen).build());
+        Screen screen = ModMenu.makeConfigScreen(client.currentScreen).build();
+        // for some reason setScreen is not setting the screen ???
+        client.setScreen(screen);
+
+        // TODO
+        context.getSource().sendFeedback(Text.literal("This feature is still under construction, in the meantime consider installing the modmenu mod."));
     }
 }

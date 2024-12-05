@@ -1,6 +1,5 @@
 {
   "commands.colormap-generator.generate.success": "Generated colormap at `%s`",
-  "commands.colormap-generator.whereis": "Colormap file is located at `%s`",
   "commands.colormap-generator.help": "Tools for generating a map of colors to minecraft blocks.",
 
   "commands.colormap-generator.profile.colormap-result": "colormap completed in %sms",

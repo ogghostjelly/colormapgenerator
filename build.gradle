@@ -18,6 +18,11 @@ repositories {
 		name = "Terraformers"
 		url = "https://maven.terraformersmc.com/"
 	}
+
+	maven {
+		name = "WorldEdit"
+		url = "https://maven.enginehub.org/repo/"
+	}
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
@@ -41,6 +46,8 @@ dependencies {
 	modApi("me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
+
+	modApi("com.sk89q.worldedit:worldedit-fabric-mc1.21:${project.worldedit_version}")
 
 	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 }

@@ -19,7 +19,7 @@ public class ColorMappingMenuBuilder extends AbstractFieldBuilder<Block, ColorMa
     private Function<Block, Text> nameProvider = null;
     private final MapColor color;
 
-    public ColorMappingMenuBuilder(Text resetButtonKey, Text fieldNameKey, Block[] valuesArray, Block value, MapColor color) {
+    public ColorMappingMenuBuilder(Text resetButtonKey, Text fieldNameKey, Block[] valuesArray, @NotNull Block value, MapColor color) {
         super(resetButtonKey, fieldNameKey);
         Objects.requireNonNull(value);
         this.valuesArray = valuesArray;
@@ -27,7 +27,7 @@ public class ColorMappingMenuBuilder extends AbstractFieldBuilder<Block, ColorMa
         this.color = color;
     }
 
-    public static ColorMappingMenuBuilder start(ConfigEntryBuilder entryBuilder, Text fieldNameKey, Block[] valuesArray, Block value, MapColor color) {
+    public static ColorMappingMenuBuilder start(ConfigEntryBuilder entryBuilder, Text fieldNameKey, Block[] valuesArray, @NotNull Block value, MapColor color) {
         return new ColorMappingMenuBuilder(entryBuilder.getResetButtonKey(), fieldNameKey, valuesArray, value, color);
     }
 

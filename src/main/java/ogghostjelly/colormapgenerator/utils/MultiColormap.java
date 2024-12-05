@@ -4,13 +4,14 @@ import net.minecraft.block.Block;
 import net.minecraft.block.MapColor;
 import net.minecraft.registry.Registries;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.stream.Stream;
 
 /**
- * A map from colors to a list of blocks that represent that color.
+ * A mapping from map colors to a list of blocks that represent that color.
  */
 public class MultiColormap {
     private final ArrayList<Block>[] map;
@@ -20,7 +21,7 @@ public class MultiColormap {
         this.map = generateColorToBlockMap();
     }
 
-    private static ArrayList<Block>[] generateColorToBlockMap() {
+    private static @NotNull ArrayList<Block>[] generateColorToBlockMap() {
         ArrayList<Block>[] map = new ArrayList[64];
         for (int i = 0; i < map.length; i++) {
             map[i] = new ArrayList<>();
@@ -37,12 +38,14 @@ public class MultiColormap {
             }
         }
 
-        assert ColorUtil.getMapColors().length == map.length;
+        if (ColorUtil.getMapColors().length != map.length) {
+            LOGGER.error("colormap length is not equal to map colors length.");
+        }
 
         return map;
     }
 
-    public Stream<Block> colorToBlocks(MapColor color) {
+    public @NotNull Stream<Block> colorToBlocks(MapColor color) {
         return this.map[color.id].stream();
     }
 }
