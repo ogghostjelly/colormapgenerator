@@ -13,8 +13,9 @@ import org.slf4j.Logger;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * A mapping from map colors to a minecraft block.
@@ -28,60 +29,40 @@ public class Colormap {
             LOGGER.error("`map` should be of length 64 but it is not!");
         }
 
-        for (int i = 0; i < map.length; i++) {
-            if (map[i] == null) {
-                LOGGER.error("null is disallowed in colormap! replacing with " + Blocks.AIR);
-                map[i] = Blocks.AIR;
-            }
+        if (Arrays.stream(map).allMatch(Objects::isNull)) {
+            LOGGER.warn("Creating empty colormap is not recommended.");
         }
+
         this.map = map;
     }
 
-    @Deprecated
     public @NotNull Block colorToBlock(int color) {
-        if (ColorUtil.IsTransparent(color)) {
-            return Blocks.AIR;
-        }
-        return this.getNearestColorToBlock(getClosestMapColorFromARGB(color));
-    }
-
-    @Deprecated
-    public @NotNull Block getNearestColorToBlock(MapColor color) {
-        var bl = this.colorToBlock(color);
-        if (bl != Blocks.AIR) {
-            return bl;
-        }
-
-        List<MapColor> list = Arrays.stream(ColorUtil.getMapColors())
-                .sorted((a, b) -> {
-                    double bDif = ColorUtil.difference(b.color, color.color);
-                    double aDif = ColorUtil.difference(a.color, color.color);
-                    return Double.compare(aDif, bDif);
-                })
-                .toList();
-
-        for (MapColor value : list) {
-            if (value == color) {
-                continue;
-            }
-
-            var block = this.colorToBlock(value);
-            if (block != Blocks.AIR) {
-                return this.colorToBlock(color);
-            }
-        }
-
-        LOGGER.error("Couldn't find fall-through color mapping for color "+color.id);
-        return Blocks.AIR;
+        return this.colorToBlock(getClosestMapColorFromARGB(color));
     }
 
     public @NotNull Block colorToBlock(MapColor color) {
-        return this.map[color.id];
+        if (this.map[color.id] != null) {
+            return this.map[color.id];
+        }
+
+
+        for (MapColor x : getSimilarColorsStream(color.color).toList()) {
+            if (x == color) {
+                continue;
+            }
+
+            if (this.map[x.id] != null) {
+                return this.map[x.id];
+            }
+        }
+
+        LOGGER.error("fatal error: couldn't find block for color `"+color.id+"`, there should always be at least one available map color since MapColor.CLEAR is always set to Blocks.AIR.");
+        return Blocks.AIR;
     }
 
     public void save(FileWriter writer) throws IOException {
         for (int i = 0; i < map.length; i++) {
-            writer.write(i+" "+ Registries.BLOCK.getId(map[i]) + "\n");
+            writer.write(i+" "+ (map[i] != null ? Registries.BLOCK.getId(map[i]) : null) + "\n");
         }
     }
 
@@ -116,6 +97,10 @@ public class Colormap {
                     continue;
                 }
 
+                if (Objects.equals(parts[1], "null")) {
+                    map[mapColorId] = null;
+                    continue;
+                }
                 Identifier blockId = Identifier.tryParse(parts[1]);
                 if (blockId == null) {
                     LOGGER.error("failed to parse block id when loading colormap, skipping.");
@@ -144,22 +129,6 @@ public class Colormap {
         return new Colormap(map);
     }
 
-    public static MapColor getClosestMapColorFromARGB(int color) {
-        Optional<MapColor> value = Arrays.stream(ColorUtil.getMapColors())
-                .min((a, b) -> {
-                    double aDif = ColorUtil.difference(a.color, color);
-                    double bDif = ColorUtil.difference(b.color, color);
-                    return Double.compare(aDif, bDif);
-                });
-
-        if (value.isEmpty()) {
-            LOGGER.error("fatal error: getMapColors is empty!");
-            return MapColor.CLEAR;
-        }
-
-        return value.get();
-    }
-
     public static Colormap getDefaultColormap() {
         var map = new Block[64];
 
@@ -175,7 +144,7 @@ public class Colormap {
         map[MapColor.LIGHT_BLUE_GRAY.id] = Blocks.CLAY;
         map[MapColor.DIRT_BROWN.id] = Blocks.PACKED_MUD;
         map[MapColor.STONE_GRAY.id] = Blocks.COBBLESTONE;
-        map[MapColor.WATER_BLUE.id] = Blocks.AIR;
+        map[MapColor.WATER_BLUE.id] = null;
         map[MapColor.OAK_TAN.id] = Blocks.OAK_PLANKS;
         map[MapColor.OFF_WHITE.id] = Blocks.QUARTZ_BLOCK;
         map[MapColor.ORANGE.id] = Blocks.ORANGE_CONCRETE;
@@ -226,10 +195,37 @@ public class Colormap {
         map[MapColor.RAW_IRON_PINK.id] = Blocks.RAW_IRON_BLOCK;
         map[MapColor.LICHEN_GREEN.id] = Blocks.VERDANT_FROGLIGHT;
 
-        map[62] = Blocks.AIR;
-        map[63] = Blocks.AIR;
+        map[62] = null;
+        map[63] = null;
 
         return new Colormap(map);
+    }
+
+    private static int compareColor(int color, int a, int b) {
+        double aDif = ColorUtil.difference(a, color);
+        double bDif = ColorUtil.difference(b, color);
+        return Double.compare(aDif, bDif);
+    }
+
+    public static MapColor getClosestMapColorFromARGB(int color) {
+        if (ColorUtil.IsTransparent(color)) {
+            return MapColor.CLEAR;
+        }
+
+        Optional<MapColor> value = Arrays.stream(ColorUtil.getMapColors())
+                .min((a, b) -> compareColor(color, a.color, b.color));
+
+        if (value.isEmpty()) {
+            LOGGER.error("fatal error: getMapColors is empty!");
+            return MapColor.CLEAR;
+        }
+
+        return value.get();
+    }
+
+    public static Stream<MapColor> getSimilarColorsStream(int color) {
+        return Arrays.stream(ColorUtil.getMapColors())
+                .sorted((a, b) -> compareColor(color, a.color, b.color));
     }
 
     public static Path getConfigPath() {

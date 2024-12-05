@@ -6,7 +6,6 @@ import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
 import net.minecraft.block.MapColor;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -45,20 +44,19 @@ public class ModMenu implements ModMenuApi {
 
             ArrayList<Block> blocks = new ArrayList<>(multicolormap.colorToBlocks(color).toList());
             if (blocks.isEmpty()) {
-                LOGGER.error("No blocks found that match color `"+color+"`");
+                LOGGER.error("no blocks found that match color `"+color+"`");
                 continue;
             }
-            blocks.add(0, Blocks.AIR);
 
             mapping.addEntry(
                     ColorMappingMenuBuilder.start(entryBuilder, Text.translatable("color.colormap-generator." + color.id),
                             blocks.toArray(new Block[0]),
                             colormap.colorToBlock(color),
                             color)
-                    .setNameProvider(block -> block != Blocks.AIR ? block.getName() : Text.translatable("gui.none"))
+                    .setNameProvider(block -> block != null ? block.getName() : Text.translatable("gui.none"))
                     .setDefaultValue(defaultColormap.colorToBlock(color))
                     .setSaveConsumer(block -> {
-                        colormap.setMapping(color, block);
+                        colormap.setMapping(color, block.orElse(null));
                     })
                     .build());
         }
