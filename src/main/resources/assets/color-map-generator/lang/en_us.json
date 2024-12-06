@@ -1,10 +1,5 @@
 {
-  "commands.colormap-generator.generate.success": "Generated colormap at `%s`",
   "commands.colormap-generator.help": "Tools for generating a map of colors to minecraft blocks.",
-
-  "commands.colormap-generator.profile.colormap-result": "colormap completed in %sms",
-  "commands.colormap-generator.profile.result": "%s completed in %sms with %s chunks",
-  "commands.colormap-generator.profile.write-vis": "Writing `%s` chunk visualizer to `%s`",
 
   "commands.colormap-generator.visualise.write": "Writing visualisation to `%s`",
   "commands.colormap-generator.visualise.invalid-texture": "%s: invalid texture, skipping.",

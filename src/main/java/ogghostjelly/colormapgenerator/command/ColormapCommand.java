@@ -1,11 +1,11 @@
 package ogghostjelly.colormapgenerator.command;
 
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.MapColor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.block.BlockModels;
@@ -25,8 +25,11 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import ogghostjelly.colormapgenerator.ModMenu;
+import ogghostjelly.colormapgenerator.colormap.IColormap;
+import ogghostjelly.colormapgenerator.config.ColormapConfig;
+import ogghostjelly.colormapgenerator.image.Image;
+import ogghostjelly.colormapgenerator.image.NearestColorImage;
 import ogghostjelly.colormapgenerator.utils.ColorUtil;
-import ogghostjelly.colormapgenerator.utils.Colormap;
 import ogghostjelly.colormapgenerator.utils.OgjUtil;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -51,8 +54,6 @@ public class ColormapCommand {
                         .executes(ColormapCommand::openconfigfolder))
                 .then(literal("colorof").then(argument("block", BlockStateArgumentType.blockState(registry))
                         .executes(ColormapCommand::colorof)))
-                .then(literal("blockof").then(argument("color", IntegerArgumentType.integer())
-                        .executes(ColormapCommand::blockof)))
                 .then(literal("visualise")
                         .executes(ColormapCommand::visualise))
                 .executes(ColormapCommand::help))));
@@ -60,10 +61,26 @@ public class ColormapCommand {
 
     /* === VISUALISATION === */
 
-    private static Path getPathToVisualization() throws IOException {
-        Path configDir = OgjUtil.getConfigDir();
+    private static Path getPathToVisDir() {
+        return OgjUtil.getConfigDir().resolve("vis");
+    }
+
+    private static Path getPathToInVis() throws IOException {
+        Path configDir = getPathToVisDir();
         Files.createDirectories(configDir);
-        return configDir.resolve("visualization.png");
+        return configDir.resolve("in.png");
+    }
+
+    private static Path getPathToBigVis() throws IOException {
+        Path configDir = getPathToVisDir();
+        Files.createDirectories(configDir);
+        return configDir.resolve("big-out.png");
+    }
+
+    private static Path getPathToTinyVis() throws IOException {
+        Path configDir = getPathToVisDir();
+        Files.createDirectories(configDir);
+        return configDir.resolve("out.png");
     }
 
     private static int visualise(CommandContext<FabricClientCommandSource> context) {
@@ -76,20 +93,29 @@ public class ColormapCommand {
     }
 
     private static void visualiseImpl(CommandContext<FabricClientCommandSource> context) throws IOException {
-        NativeImage inputImage = OgjUtil.askUserForImage();
-        if (inputImage == null) {
+        NativeImage inputNativeImage = OgjUtil.askUserForImage();
+        if (inputNativeImage == null) {
             return;
         }
+        Image inputImage = new NearestColorImage(inputNativeImage);
 
-        NativeImage outputImage = new NativeImage(inputImage.getWidth()*16, inputImage.getHeight()*16, false);
+        NativeImage bigOutputImage = new NativeImage(inputImage.getWidth()*16, inputImage.getHeight()*16, false);
+        NativeImage tinyOutputImage = new NativeImage(inputImage.getWidth(), inputImage.getHeight(), false);
 
-        Colormap colorMap = getColormap();
+        IColormap colorMap = getColormap();
         BakedModelManager bakedModelManager = context.getSource().getClient().getBakedModelManager();
 
         for (int y = 0; y < inputImage.getHeight(); y++) {
             for (int x = 0; x < inputImage.getWidth(); x++) {
-                int color = ColorUtil.SwapFormat(inputImage.getColor(x, y));
+                MapColor color = inputImage.getPixel(x, y);
                 Block block = colorMap.colorToBlock(color);
+
+                if (block != Blocks.AIR) {
+                    tinyOutputImage.setColor(x, y, ColorUtil.SwapFormat(block.getDefaultMapColor().color | 0xff000000));
+                } else {
+                    tinyOutputImage.setColor(x, y, 0);
+                }
+
                 if (block == Blocks.AIR) {
                     continue;
                 }
@@ -126,16 +152,18 @@ public class ColormapCommand {
                     continue;
                 }
 
-                image.copyRect(outputImage, 0, 0, x*16, y*16, 16, 16, false, false);
+                image.copyRect(bigOutputImage, 0, 0, x*16, y*16, 16, 16, false, false);
             }
         }
 
-        Path path = getPathToVisualization();
-        context.getSource().sendFeedback(Text.translatable("commands.colormap-generator.visualise.write", path));
-        outputImage.writeTo(path);
+        context.getSource().sendFeedback(Text.translatable("commands.colormap-generator.visualise.write", Text.of(getPathToVisDir().toUri())));
+        inputNativeImage.writeTo(getPathToInVis());
+        bigOutputImage.writeTo(getPathToBigVis());
+        tinyOutputImage.writeTo(getPathToTinyVis());
 
-        outputImage.close();
-        inputImage.close();
+        bigOutputImage.close();
+        tinyOutputImage.close();
+        inputNativeImage.close();
     }
 
     /* === COLOR OF/BLOCK OF === */
@@ -145,17 +173,6 @@ public class ColormapCommand {
 
         int color = blockArg.getBlockState().getBlock().getDefaultMapColor().color;
         context.getSource().sendFeedback(Text.literal(Integer.toString(color)));
-
-        return 1;
-    }
-
-    private static int blockof(CommandContext<FabricClientCommandSource> context) {
-        // (x | 0xff000000) means make it not transparent
-        int color = IntegerArgumentType.getInteger(context, "color") | 0xff000000;
-
-        Colormap colorMap = getColormap();
-        Identifier blockId = Registries.BLOCK.getId(colorMap.colorToBlock(color));
-        context.getSource().sendFeedback(Text.literal(blockId.toString()));
 
         return 1;
     }
@@ -170,8 +187,8 @@ public class ColormapCommand {
 
     /* === COLORMAP SETTINGS === */
 
-    private static @NotNull Colormap getColormap() {
-        return Colormap.tryLoadFromConfig();
+    private static @NotNull IColormap getColormap() {
+        return ColormapConfig.tryLoadFromConfig().toColormap();
     }
 
     private static int openconfigfolder(CommandContext<FabricClientCommandSource> context) {

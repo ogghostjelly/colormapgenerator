@@ -1,9 +1,10 @@
-package ogghostjelly.colormapgenerator.utils;
+package ogghostjelly.colormapgenerator.colormap;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.MapColor;
 import net.minecraft.registry.Registries;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
+import ogghostjelly.colormapgenerator.utils.ColorUtil;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 

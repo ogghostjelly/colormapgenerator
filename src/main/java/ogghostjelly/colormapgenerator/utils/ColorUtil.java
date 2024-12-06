@@ -50,4 +50,10 @@ public class ColorUtil {
         }
         return colors;
     }
+
+    public static int compare(int color, int a, int b) {
+        double aDif = ColorUtil.difference(a, color);
+        double bDif = ColorUtil.difference(b, color);
+        return Double.compare(aDif, bDif);
+    }
 }

@@ -11,8 +11,8 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import ogghostjelly.colormapgenerator.config.ColorMappingMenuBuilder;
 import ogghostjelly.colormapgenerator.utils.ColorUtil;
-import ogghostjelly.colormapgenerator.utils.Colormap;
-import ogghostjelly.colormapgenerator.utils.MultiColormap;
+import ogghostjelly.colormapgenerator.config.ColormapConfig;
+import ogghostjelly.colormapgenerator.colormap.MultiColormap;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -33,9 +33,9 @@ public class ModMenu implements ModMenuApi {
 
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
-        var multicolormap = new MultiColormap();
-        var colormap = Colormap.tryLoadFromConfig();
-        var defaultColormap = Colormap.getDefaultColormap();
+        MultiColormap multicolormap = new MultiColormap();
+        ColormapConfig colormap = ColormapConfig.tryLoadFromConfig();
+        ColormapConfig defaultColormap = ColormapConfig.getDefaultColormap();
 
         for (MapColor color : ColorUtil.getMapColors()) {
             if (color == MapColor.CLEAR) {
@@ -51,10 +51,10 @@ public class ModMenu implements ModMenuApi {
             mapping.addEntry(
                     ColorMappingMenuBuilder.start(entryBuilder, Text.translatable("color.colormap-generator." + color.id),
                             blocks.toArray(new Block[0]),
-                            colormap.colorToBlock(color),
+                            colormap.getMapping(color),
                             color)
                     .setNameProvider(block -> block != null ? block.getName() : Text.translatable("gui.none"))
-                    .setDefaultValue(defaultColormap.colorToBlock(color))
+                    .setDefaultValue(defaultColormap.getMapping(color))
                     .setSaveConsumer(block -> {
                         colormap.setMapping(color, block.orElse(null));
                     })

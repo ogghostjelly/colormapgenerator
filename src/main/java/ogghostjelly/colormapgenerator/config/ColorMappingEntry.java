@@ -82,7 +82,7 @@ public class ColorMappingEntry extends TooltipListEntry<Optional<Block>> {
         this.defaultValue = defaultValue;
         this.value = new AtomicInteger(value);
         this.saveCallback = saveConsumer;
-        this.maximum = this.blocks.length - 1 + 1;
+        this.maximum = this.blocks.length - 1;
         this.minimum = 0;
         var colorDisplayTextWidget = new TextFieldWidget(MinecraftClient.getInstance().textRenderer, 0, 0, this.getFieldName());
         this.colorDisplayWidget = new ColorDisplayWidget(colorDisplayTextWidget, 0, 0, 20, color.color | 0xff000000);
