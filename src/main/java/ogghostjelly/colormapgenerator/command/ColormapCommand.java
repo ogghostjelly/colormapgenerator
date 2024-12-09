@@ -3,42 +3,24 @@ package ogghostjelly.colormapgenerator.command;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.MapColor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.render.block.BlockModels;
-import net.minecraft.client.render.model.BakedModel;
-import net.minecraft.client.render.model.BakedModelManager;
-import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.SpriteContents;
 import net.minecraft.command.argument.BlockStateArgument;
 import net.minecraft.command.argument.BlockStateArgumentType;
-import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.random.Random;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import ogghostjelly.colormapgenerator.ModMenu;
 import ogghostjelly.colormapgenerator.colormap.IColormap;
 import ogghostjelly.colormapgenerator.config.ColormapConfig;
-import ogghostjelly.colormapgenerator.image.Image;
-import ogghostjelly.colormapgenerator.image.NearestColorImage;
-import ogghostjelly.colormapgenerator.utils.ColorUtil;
 import ogghostjelly.colormapgenerator.utils.OgjUtil;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
@@ -97,7 +79,8 @@ public class ColormapCommand {
         if (inputNativeImage == null) {
             return;
         }
-        Image inputImage = new NearestColorImage(inputNativeImage);
+        /*TODO
+        Image inputImage = new ThresholdImage(inputNativeImage);
 
         NativeImage bigOutputImage = new NativeImage(inputImage.getWidth()*16, inputImage.getHeight()*16, false);
         NativeImage tinyOutputImage = new NativeImage(inputImage.getWidth(), inputImage.getHeight(), false);
@@ -111,7 +94,7 @@ public class ColormapCommand {
                 Block block = colorMap.colorToBlock(color);
 
                 if (block != Blocks.AIR) {
-                    tinyOutputImage.setColor(x, y, ColorUtil.SwapFormat(block.getDefaultMapColor().color | 0xff000000));
+                    tinyOutputImage.setColor(x, y, ColorUtil.SwapFormat(ColorUtil.mapColorToARGB(block.getDefaultMapColor())));
                 } else {
                     tinyOutputImage.setColor(x, y, 0);
                 }
@@ -163,7 +146,7 @@ public class ColormapCommand {
 
         bigOutputImage.close();
         tinyOutputImage.close();
-        inputNativeImage.close();
+        inputNativeImage.close();*/
     }
 
     /* === COLOR OF/BLOCK OF === */

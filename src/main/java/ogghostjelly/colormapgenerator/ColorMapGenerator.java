@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Colormap pipeline
- * 1. An image gets converted into MapColors using the Image interface
+ * 1. An image gets converted into MapColors using the IQuantize interface
  * 2. The MapColors get converted into blocks using the IColormap interface
  */
 

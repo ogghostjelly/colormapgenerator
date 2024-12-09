@@ -1,10 +1,16 @@
 package ogghostjelly.colormapgenerator.utils;
 
 import net.minecraft.block.MapColor;
+import ogghostjelly.colormapgenerator.ColorMapGenerator;
+import org.slf4j.Logger;
 
 import java.awt.*;
+import java.util.Arrays;
+import java.util.Optional;
 
 public class ColorUtil {
+    private static final Logger LOGGER = ColorMapGenerator.LOGGER;
+
     public static double difference(int r1, int g1, int b1, int r2, int g2, int b2) {
         return Math.sqrt(Math.pow(r2 - r1, 2) + Math.pow(g2 - g1, 2) + Math.pow(b2 - b1, 2));
     }
@@ -51,9 +57,32 @@ public class ColorUtil {
         return colors;
     }
 
+    public static int mapColorToARGB(MapColor color) {
+        if (color == MapColor.CLEAR) {
+            return color.color;
+        }
+        return color.color | 0xff000000;
+    }
+
     public static int compare(int color, int a, int b) {
         double aDif = ColorUtil.difference(a, color);
         double bDif = ColorUtil.difference(b, color);
         return Double.compare(aDif, bDif);
+    }
+
+    public static MapColor getClosestMapColorFromARGB(MapColor[] colors, int color) {
+        if (ColorUtil.IsTransparent(color)) {
+            return MapColor.CLEAR;
+        }
+
+        Optional<MapColor> value = Arrays.stream(colors)
+                .min((a, b) -> ColorUtil.compare(color, a.color, b.color));
+
+        if (value.isEmpty()) {
+            LOGGER.error("fatal error: getMapColors is empty!");
+            return MapColor.CLEAR;
+        }
+
+        return value.get();
     }
 }

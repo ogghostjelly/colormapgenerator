@@ -19,6 +19,7 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
+import ogghostjelly.colormapgenerator.utils.ColorUtil;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.ArrayList;
@@ -85,7 +86,7 @@ public class ColorMappingEntry extends TooltipListEntry<Optional<Block>> {
         this.maximum = this.blocks.length - 1;
         this.minimum = 0;
         var colorDisplayTextWidget = new TextFieldWidget(MinecraftClient.getInstance().textRenderer, 0, 0, this.getFieldName());
-        this.colorDisplayWidget = new ColorDisplayWidget(colorDisplayTextWidget, 0, 0, 20, color.color | 0xff000000);
+        this.colorDisplayWidget = new ColorDisplayWidget(colorDisplayTextWidget, 0, 0, 20, ColorUtil.mapColorToARGB(color));
         this.sliderWidget = new ColorMappingEntry.Slider(0, 0, 152, 20, ((double)this.value.get() - (double)minimum) / (double)Math.abs(maximum - minimum));
         this.resetButton = ButtonWidget.builder(resetButtonKey, (widget) -> {
             this.setValue(this.indexOf(defaultValue.get()));
