@@ -2,6 +2,7 @@ package ogghostjelly.colormapgenerator.image;
 
 import net.minecraft.block.MapColor;
 import net.minecraft.client.texture.NativeImage;
+import ogghostjelly.colormapgenerator.colormap.MapColorImage;
 import ogghostjelly.colormapgenerator.utils.ColorUtil;
 
 /**

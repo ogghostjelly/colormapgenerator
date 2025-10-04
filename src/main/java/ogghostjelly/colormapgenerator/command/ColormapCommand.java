@@ -12,7 +12,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
 import ogghostjelly.colormapgenerator.ModMenu;
-import ogghostjelly.colormapgenerator.colormap.IColormap;
+import ogghostjelly.colormapgenerator.blockmap.IBlockmap;
 import ogghostjelly.colormapgenerator.config.ColormapConfig;
 import ogghostjelly.colormapgenerator.utils.OgjUtil;
 import org.jetbrains.annotations.NotNull;
@@ -170,7 +170,7 @@ public class ColormapCommand {
 
     /* === COLORMAP SETTINGS === */
 
-    private static @NotNull IColormap getColormap() {
+    private static @NotNull IBlockmap getColormap() {
         return ColormapConfig.tryLoadFromConfig().toColormap();
     }
 

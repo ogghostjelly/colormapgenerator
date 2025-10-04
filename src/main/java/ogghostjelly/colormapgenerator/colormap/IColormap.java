@@ -1,9 +1,9 @@
 package ogghostjelly.colormapgenerator.colormap;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.MapColor;
+import net.minecraft.client.texture.NativeImage;
 import org.jetbrains.annotations.NotNull;
 
 public interface IColormap {
-    @NotNull Block colorToBlock(MapColor color);
+    @NotNull ColormapItem map(int color);
+    @NotNull MapColorImage map(NativeImage image);
 }

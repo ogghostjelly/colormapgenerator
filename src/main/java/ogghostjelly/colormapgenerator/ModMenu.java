@@ -12,7 +12,7 @@ import net.minecraft.text.Text;
 import ogghostjelly.colormapgenerator.config.ColorMappingMenuBuilder;
 import ogghostjelly.colormapgenerator.utils.ColorUtil;
 import ogghostjelly.colormapgenerator.config.ColormapConfig;
-import ogghostjelly.colormapgenerator.colormap.MultiColormap;
+import ogghostjelly.colormapgenerator.blockmap.BlockMapColors;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -33,9 +33,11 @@ public class ModMenu implements ModMenuApi {
 
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
-        MultiColormap multicolormap = new MultiColormap();
+        BlockMapColors multicolormap = new BlockMapColors();
         ColormapConfig colormap = ColormapConfig.tryLoadFromConfig();
         ColormapConfig defaultColormap = ColormapConfig.getDefaultColormap();
+
+
 
         for (MapColor color : ColorUtil.getMapColors()) {
             if (color == MapColor.CLEAR) {

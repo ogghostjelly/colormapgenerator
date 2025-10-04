@@ -1,6 +1,7 @@
 package ogghostjelly.colormapgenerator.image;
 
 import net.minecraft.client.texture.NativeImage;
+import ogghostjelly.colormapgenerator.colormap.MapColorImage;
 
 public interface IQuantize {
     /**

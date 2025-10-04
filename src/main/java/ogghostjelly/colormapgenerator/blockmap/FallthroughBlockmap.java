@@ -1,4 +1,4 @@
-package ogghostjelly.colormapgenerator.colormap;
+package ogghostjelly.colormapgenerator.blockmap;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -15,11 +15,12 @@ import java.util.stream.Stream;
 /**
  * A mapping from map colors to a minecraft block. Can have null mappings, if a mapping is null it will "fallthrough" and find the next closest color.
  */
-public class FallthroughColormap implements IColormap {
+@Deprecated
+public class FallthroughBlockmap implements IBlockmap {
     private final Block[] map;
     private static final Logger LOGGER = ColorMapGenerator.LOGGER;
 
-    public FallthroughColormap(Block[] map) {
+    public FallthroughBlockmap(Block[] map) {
         if (map.length != 64) {
             LOGGER.error("`map` should be of length 64 but it is not!");
         }
@@ -51,7 +52,7 @@ public class FallthroughColormap implements IColormap {
         return Blocks.AIR;
     }
 
-    public @NotNull Block colorToBlock(MapColor color) {
+    public @NotNull Block map(MapColor color, MapColor.Brightness brightness) {
         return this.map[color.id];
     }
 

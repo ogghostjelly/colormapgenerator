@@ -6,8 +6,8 @@ import net.minecraft.block.MapColor;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import ogghostjelly.colormapgenerator.ColorMapGenerator;
-import ogghostjelly.colormapgenerator.colormap.FallthroughColormap;
-import ogghostjelly.colormapgenerator.colormap.IColormap;
+import ogghostjelly.colormapgenerator.blockmap.FallthroughBlockmap;
+import ogghostjelly.colormapgenerator.blockmap.IBlockmap;
 import ogghostjelly.colormapgenerator.utils.OgjUtil;
 import org.slf4j.Logger;
 
@@ -27,8 +27,8 @@ public class ColormapConfig {
         this.map = map;
     }
 
-    public IColormap toColormap() {
-        return new FallthroughColormap(this.map);
+    public IBlockmap toColormap() {
+        return new FallthroughBlockmap(this.map);
     }
 
     public Block getMapping(MapColor color) {

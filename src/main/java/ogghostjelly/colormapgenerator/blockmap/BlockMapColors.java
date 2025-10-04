@@ -1,4 +1,4 @@
-package ogghostjelly.colormapgenerator.colormap;
+package ogghostjelly.colormapgenerator.blockmap;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.MapColor;
@@ -14,11 +14,11 @@ import java.util.stream.Stream;
 /**
  * A mapping from map colors to a list of blocks that represent that color.
  */
-public class MultiColormap {
+public class BlockMapColors {
     private final ArrayList<Block>[] map;
     private static final Logger LOGGER = ColorMapGenerator.LOGGER;
 
-    public MultiColormap() {
+    public BlockMapColors() {
         this.map = generateColorToBlockMap();
     }
 
