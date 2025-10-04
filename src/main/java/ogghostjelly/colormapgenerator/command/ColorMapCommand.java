@@ -18,6 +18,7 @@ import net.minecraft.command.argument.BlockStateArgument;
 import net.minecraft.command.argument.BlockStateArgumentType;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
+import net.minecraft.util.ColorCode;
 import net.minecraft.util.Colors;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
@@ -274,13 +275,15 @@ public class ColorMapCommand {
         Path path = getPathToColorMap();
         BufferedWriter bw = new BufferedWriter(new FileWriter(path.toFile()));
 
-        for (Block value : Registries.BLOCK) {
-            MapColor color = value.getDefaultMapColor();
-            bw.write(Registries.BLOCK.getId(value) + " " + color.color + "\n");
+        ColorMap colormap = ColorMap.generateColorMap();
+
+        for (int i = 0; i < 64; i++) {
+            MapColor color = MapColor.get(i);
+            bw.write(i + " " + new ColorCode(color.color) + " " + colormap.colorToBlock(color.color | 0xff000000) + "\n");
         }
 
         bw.close();
 
-        context.getSource().sendFeedback(Text.translatable("commands.colormap.generate.success", path));
+        context.getSource().sendFeedback(Text.translatable("commands.colormap.generate.success", Text.of(path.toUri())));
     }
 }
