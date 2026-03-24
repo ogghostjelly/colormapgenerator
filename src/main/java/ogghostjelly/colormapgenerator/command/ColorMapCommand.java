@@ -28,10 +28,7 @@ import ogghostjelly.colormapgenerator.utils.OgjUtils;
 import ogghostjelly.colormapgenerator.utils.color.ColorMap;
 import ogghostjelly.colormapgenerator.utils.color.ColorUtil;
 import ogghostjelly.colormapgenerator.utils.color.IColorMap;
-import ogghostjelly.colormapgenerator.utils.image.ArrayBlockImage;
-import ogghostjelly.colormapgenerator.utils.image.BSPBlockImage;
-import ogghostjelly.colormapgenerator.utils.image.ImageChunk;
-import ogghostjelly.colormapgenerator.utils.image.RLEBlockImage;
+import ogghostjelly.colormapgenerator.utils.image.*;
 import org.joml.Vector2i;
 
 import java.io.BufferedWriter;
@@ -65,10 +62,15 @@ public class ColorMapCommand {
                 .executes(ColorMapCommand::help))));
     }
 
-    private static Path getPathToVisualization() throws IOException {
-        Path configDir = getConfigDir();
-        Files.createDirectories(configDir);
-        return configDir.resolve("visualization.png");
+    private static Path getVisualizationDir() throws IOException {
+        Path visDir = getConfigDir().resolve("vis");
+        Files.createDirectories(visDir);
+        return visDir;
+    }
+
+    private static void writeVisualization(String name, NativeImage image) throws IOException {
+        Path path = getVisualizationDir().resolve(name + ".png");
+        image.writeTo(path);
     }
 
     private static int visualise(CommandContext<FabricClientCommandSource> context) {
@@ -86,9 +88,80 @@ public class ColorMapCommand {
             return;
         }
 
-        NativeImage outputImage = new NativeImage(inputImage.getWidth()*16, inputImage.getHeight()*16, false);
-
         ColorMap colorMap = ColorMap.generateColorMap();
+
+        writeVisualization("big-out", visualiseBlock(context, inputImage, colorMap));
+        writeVisualization("out", visualisePosterized(context, inputImage, colorMap));
+        writeVisualization("in", inputImage);
+
+        writeVisualization("bi-rle", visualiseBlockImage(context, inputImage, colorMap, new RLEBlockImage(inputImage,
+                colorMap)));
+        writeVisualization("bi-bsp", visualiseBlockImage(context, inputImage, colorMap, new BSPBlockImage(inputImage, colorMap)));
+        writeVisualization("bi-arr", visualiseBlockImage(context, inputImage, colorMap, new ArrayBlockImage(inputImage, colorMap)));
+
+        context.getSource().sendFeedback(Text.translatable("commands.visualise.write", getVisualizationDir()));
+        inputImage.close();
+    }
+
+    private static NativeImage visualiseBlockImage(CommandContext<FabricClientCommandSource> context,
+                                                   NativeImage inputImage, IColorMap colorMap, IBlockImage blockImage) {
+        int scale = 2;
+        NativeImage outputImage = new NativeImage(inputImage.getWidth()*scale, inputImage.getHeight()*scale, false);
+
+        for (int y = 0; y < inputImage.getHeight(); y++) {
+            for (int x = 0; x < inputImage.getWidth(); x++) {
+                int color = ColorUtil.SwapFormat(inputImage.getColor(x, y));
+                Block block = colorMap.colorToBlock(color);
+                if (block == Blocks.AIR) {
+                    outputImage.fillRect(x*scale, y*scale, 2, 2, 0);
+                    continue;
+                }
+
+                int mapColor = ColorUtil.SwapFormat(block.getDefaultMapColor().color);
+                outputImage.fillRect(x*scale, y*scale, 2, 2, mapColor | 0xFF000000);
+            }
+        }
+
+        blockImage.getChunks().forEach(chunk -> {
+            for (int y : new int[]{chunk.to.y*scale, chunk.from.y*scale}) {
+                for (int x = chunk.from.x*scale; x < chunk.to.x*scale; x++) {
+                    outputImage.setColor(x, y, 0xFF0000FF);
+                }
+            }
+            for (int x : new int[]{chunk.to.x*scale, chunk.from.x*scale}) {
+                for (int y = chunk.from.y*scale; y < chunk.to.y*scale; y++) {
+                    outputImage.setColor(x, y, 0xFF0000FF);
+                }
+            }
+        });
+
+        return outputImage;
+    }
+
+    private static NativeImage visualisePosterized(CommandContext<FabricClientCommandSource> context,
+                                              NativeImage inputImage, IColorMap colorMap) {
+        NativeImage outputImage = new NativeImage(inputImage.getWidth(), inputImage.getHeight(), false);
+
+        for (int y = 0; y < inputImage.getHeight(); y++) {
+            for (int x = 0; x < inputImage.getWidth(); x++) {
+                int color = ColorUtil.SwapFormat(inputImage.getColor(x, y));
+                Block block = colorMap.colorToBlock(color);
+                if (block == Blocks.AIR) {
+                    outputImage.setColor(x, y, 0);
+                    continue;
+                }
+
+                int mapColor = ColorUtil.SwapFormat(block.getDefaultMapColor().color);
+                outputImage.setColor(x, y, mapColor | 0xFF000000);
+            }
+        }
+
+        return outputImage;
+    }
+
+    private static NativeImage visualiseBlock(CommandContext<FabricClientCommandSource> context,
+                                              NativeImage inputImage, IColorMap colorMap) {
+        NativeImage outputImage = new NativeImage(inputImage.getWidth()*16, inputImage.getHeight()*16, false);
         BakedModelManager bakedModelManager = context.getSource().getClient().getBakedModelManager();
 
         for (int y = 0; y < inputImage.getHeight(); y++) {
@@ -135,12 +208,7 @@ public class ColorMapCommand {
             }
         }
 
-        Path path = getPathToVisualization();
-        context.getSource().sendFeedback(Text.translatable("commands.visualise.write", path));
-        outputImage.writeTo(path);
-
-        outputImage.close();
-        inputImage.close();
+        return outputImage;
     }
 
     private static int profile(CommandContext<FabricClientCommandSource> context) {

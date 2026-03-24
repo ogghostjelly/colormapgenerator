@@ -32,6 +32,13 @@ public class ColorMap implements IColorMap {
             // Cactus breaks when placed near other blocks which is not helpful to us,
             // so we remove it from the map.
             return !(item.block instanceof CactusBlock) &&
+                    // TODO: Drip leaf causes weird texture issues, i'll just disable it temporarily
+                    !(item.block instanceof SmallDripleafBlock) &&
+                    !(item.block instanceof BigDripleafBlock) &&
+                    !(item.block instanceof BigDripleafStemBlock) &&
+                    // fuck diorite
+                    !(item.block == Blocks.DIORITE) &&
+                    // prevent fluids or non solids
                     isNotFluid(item.block.getDefaultState()) &&
                     isSolid(item.block.getDefaultState());
         });
